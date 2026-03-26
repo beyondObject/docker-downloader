@@ -6,18 +6,27 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: 1. 实时查询并拉取真实标签 (绝不靠猜)
+      - name: 彻底绕过限流抓取标签与镜像
         run: |
-          # 直接调用 Docker Hub 官方 API，抓取当前真实存在的 3.x 长标签
-          TAG=$(curl -s "https://hub.docker.com/v2/repositories/bitnami/kafka/tags/?page_size=100" | grep -o '"name":"3\.[0-9]*\.[0-9]*-debian-[^"]*"' | head -n 1 | cut -d'"' -f4)
-          echo "在官方库查找到的绝对精确标签为: bitnami/kafka:$TAG"
+          # 1. 用 skopeo 走原生通信协议，抓取全部标签，彻底避开网页 API 的防爬虫拦截
+          ALL_TAGS=$(skopeo list-tags docker://docker.io/bitnami/kafka)
           
-          # 用查到的真实名字拉取并打包
-          docker pull bitnami/kafka:$TAG
-          docker save -o kafka-bitnami.tar bitnami/kafka:$TAG
+          # 2. 精准筛选出 3.x 系列最新鲜的真实长标签（涵盖 3.6、3.7、3.8 等）
+          REAL_TAG=$(echo "$ALL_TAGS" | jq -r '.Tags[]' | grep -E '^3\.[0-9]+\.[0-9]+-debian-[0-9]+-r[0-9]+$' | sort -V | tail -n 1)
           
-      - name: 2. 提供离线包下载
+          echo "===== 成功锁定底层真实存在的标签: bitnami/kafka:$REAL_TAG ====="
+          
+          # 3. 稳稳地拉取并打包
+          docker pull bitnami/kafka:$REAL_TAG
+          docker save -o kafka-image.tar bitnami/kafka:$REAL_TAG
+          
+          # 4. 把抓到的精确名字写进文本文件，免得你手敲出错
+          echo "bitnami/kafka:$REAL_TAG" > image_name.txt
+          
+      - name: 提供离线包与名字下载
         uses: actions/upload-artifact@v4
         with:
-          name: kafka-bitnami-tar
-          path: kafka-bitnami.tar
+          name: kafka-offline-package
+          path: |
+            kafka-image.tar
+            image_name.txt
