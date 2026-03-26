@@ -6,13 +6,13 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: 1. 让 GitHub 的服务器拉取 Kafka 镜像 (修复版本号)
+      - name: 1. 暴力拉取最新版 (无视版本号规则)
         run: |
-          docker pull bitnami/kafka:3.7.0
-          docker save -o kafka-3.7.0.tar bitnami/kafka:3.7.0
+          docker pull bitnami/kafka:latest
+          docker save -o kafka-latest.tar bitnami/kafka:latest
           
-      - name: 2. 把 tar 包变成可以直接下载的文件
+      - name: 2. 打包提供下载
         uses: actions/upload-artifact@v4
         with:
-          name: kafka-3.7.0-tar-package
-          path: kafka-3.7.0.tar
+          name: kafka-latest-tar-package
+          path: kafka-latest.tar
