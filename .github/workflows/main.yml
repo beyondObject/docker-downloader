@@ -6,13 +6,18 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: 1. 暴力拉取最新版 (无视版本号规则)
+      - name: 1. 实时查询并拉取真实标签 (绝不靠猜)
         run: |
-          docker pull bitnami/kafka:latest
-          docker save -o kafka-latest.tar bitnami/kafka:latest
+          # 直接调用 Docker Hub 官方 API，抓取当前真实存在的 3.x 长标签
+          TAG=$(curl -s "https://hub.docker.com/v2/repositories/bitnami/kafka/tags/?page_size=100" | grep -o '"name":"3\.[0-9]*\.[0-9]*-debian-[^"]*"' | head -n 1 | cut -d'"' -f4)
+          echo "在官方库查找到的绝对精确标签为: bitnami/kafka:$TAG"
           
-      - name: 2. 打包提供下载
+          # 用查到的真实名字拉取并打包
+          docker pull bitnami/kafka:$TAG
+          docker save -o kafka-bitnami.tar bitnami/kafka:$TAG
+          
+      - name: 2. 提供离线包下载
         uses: actions/upload-artifact@v4
         with:
-          name: kafka-latest-tar-package
-          path: kafka-latest.tar
+          name: kafka-bitnami-tar
+          path: kafka-bitnami.tar
