@@ -1,0 +1,19 @@
+name: Download Docker Image
+
+# 允许我们手动点击按钮触发
+on: workflow_dispatch
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 1. 让 GitHub 的服务器拉取 Kafka 镜像
+        run: |
+          docker pull bitnami/kafka:3.6
+          docker save -o kafka-3.6.tar bitnami/kafka:3.6
+          
+      - name: 2. 把 tar 包变成可以直接下载的文件
+        uses: actions/upload-artifact@v4
+        with:
+          name: kafka-3.6-tar-package
+          path: kafka-3.6.tar
